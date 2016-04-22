@@ -1,0 +1,46 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Frame</title>
+<style type="text/css">
+    body { margin: 0; background: rgb(38, 50, 56); overflow: hidden; line-height: 1.5; font-size: 14px; color: #fff;
+           font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; }
+           
+
+    
+    .movie {
+        width: 190px;
+        height: 240px;
+        background: url("./assets/monster.png") no-repeat 0px 0px;
+        
+    }
+</style>
+</head>
+<body>
+    
+    <div class="movie"></div>
+    
+    
+<script type="text/javascript">
+    var movie = document.getElementsByClassName("movie").item(0);
+    var currentFrame = 0;
+    var delay = 100;
+
+    function play() {
+        // 图片只有 10 帧，当前帧超过 10 帧的时候重新跳转至第一帧。
+        currentFrame = currentFrame % 10;
+        movie.style.backgroundPosition = "" + (currentFrame * -190) + "px 0px";
+
+        ++currentFrame;
+        setTimeout(play, delay);
+    }
+
+    play();
+</script>
+
+    
+</body>
+</html>
