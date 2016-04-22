@@ -1,0 +1,263 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+
+
+    <style type="text/css">
+        body { margin: 0; background: rgb(38, 50, 56); }
+        #stage-wrapper { background: #000; width: 800px; height:600px; margin: 30px auto; }
+        #stage { display: inline-block; vertical-align: top; width: 800px; height: 600px; }
+        #no-canvas { font-size: 14px; font-weight: bold; color: #4800ff; padding: 16px; }
+    </style>
+
+
+    <script type="text/javascript">///<![CDATA[
+        "use strict";
+        /// TODU: `requestAnimationFrame` 补丁；
+        var $request = window.requestAnimationFrame 
+                    || window.webkitRequestAnimationFrame 
+                    || window.mozRequestAnimationFrame 
+                    || window.msRequestAnimationFrame
+                    || window.oRequestAnimationFrame;
+        var $cancel = window.cancelAnimationFrame
+                    || window.webkitCancelAnimationFrame || window.webkitCancelRequestAnimationFrame
+                    || window.mozCancelAnimationFrame    || window.mozCancelRequestAnimationFrame
+                    || window.msCancelAnimationFrame     || window.msCancelRequestAnimationFrame
+                    || window.oCancelAnimationFrame      || window.oCancelRequestAnimationFrame;
+
+        if ( !$request ) {
+            /// TODU: `IE10` 以下的浏览器不支持 `requestAnimationFrame` 特性；
+            var lastTime = 0;
+            $request = function $request( callback ) {
+                var currTime = +(new Date);
+                var timeToCall = Math.max(0, 16 - (currTime - lastTime));
+                var id = window.setTimeout(function() { callback(currTime + timeToCall); },
+                    timeToCall);
+                lastTime = currTime + timeToCall;
+                return id;
+            }
+
+            $cancel = function $cancel( id ) {
+                clearTimeout(id);
+            }
+        }
+    ///]]></script>
+
+
+    <script type="text/javascript">///<![CDATA[
+    (function main( domain, undefined ) { "use strict";
+        var PI2 = Math.PI * 2;
+
+
+        var stage         = document.createElement("canvas"); /// 舞台对象；
+        var context       = stage.getContext("2d"); /// 2d 绘图上下文对象；
+        var stageList     = []; /// 显示对象列表；
+        var rendenHandler = 0;  /// 渲染句柄；
+        var gravity = 9.8;      /// 重力加速度；
+        var pixelPerMeter = 30; /// 像素与米转换比例，因为重力加速度为 9.8m/s; 如果 1：1 转换的话，每秒才加速 9.8 个像素；
+        var timeLast = 0; /// 上次绘制舞台时间；
+        var elapsed  = 0; /// 从上次绘制舞台到当前所经过的时间；
+        //var bounce = -0.65; /// 弹力系数；
+        var friction = 0.95; /// 摩擦系数；
+        var isMouseDown = false;
+        var mouseX = 0;
+        var mouseY = 0;
+
+
+        /// TODU: 定义球类；
+        function Ball( radius, color ) {
+            this.x  = 0; // 坐标数据；
+            this.y  = 0;
+
+            this.vx = 0; // 速度数据；
+            this.vy = 0;
+
+            this.color  = color;  // 颜色；
+            this.radius = radius; // 半径；
+
+            this.bounce = -1;
+
+            this.isActived = false; // 状态；
+        }
+
+
+        /// TODU: 场景渲染函数；
+        function renden() {
+            var timeNow  = getTimer();
+            elapsed  = (timeNow - timeLast) * 0.001; /// TODU: 将毫秒转换成秒；
+            timeLast = timeNow;
+
+            if ( isMouseDown ) {
+                createBall(mouseX, mouseY);
+            }
+
+            var len = stageList.length;
+            var ball = null;
+            var t = 0;
+
+            /// TODU: 舞台重绘；
+            context.clearRect(0, 0, stage.width, stage.height);
+
+            while( len-- ) {
+                /// TODU: 计算所有显示对象的位置；
+                ball = stageList[len];
+
+                if ( ball.isActived ) {
+                    /// TODU: 更新 `ball` 对象至新的位置；
+                    ball.vy += (t = gravity * elapsed * pixelPerMeter);
+                    ball.x  += (ball.vx * elapsed);
+                    ball.y  += (ball.vy * elapsed);
+                    //ball.vx *= friction;
+                    //ball.vy *= friction;
+
+                    /// TODU: 绘制 `ball` 对象；
+                    context.beginPath();
+                    context.fillStyle = ball.color;
+                    context.arc(ball.x, ball.y, ball.radius, 0, PI2);
+                    context.closePath();
+                    context.fill();
+
+                    /// TODU: 反弹！！！
+                    var h = stage.height - ball.radius;
+                    var x = ball.radius;
+                    var w = stage.width - ball.radius;
+                        
+                    if ( ball.y >= h ) {
+                        ball.y = h;
+                        ball.vy *= ball.bounce;
+                        ball.vx *= friction;
+                    }
+
+                    if ( ball.x <= x ) {
+                        ball.x = x;
+                        ball.vx *= ball.bounce;
+                    }
+
+                    if ( ball.x >= w ) {
+                        ball.x = w;
+                        ball.vx *= ball.bounce;
+                    }
+
+                    if ( Math.abs(ball.vx) <= 1 && Math.abs(ball.vy) <= (1 + t) ) {
+                        ball.isActived = false;
+                    }
+                }
+            }
+
+                
+            for ( var i = 0; i < stageList.length; ++i ) {
+                ball = stageList[i];
+
+                if ( !ball.isActived ) { 
+                    stageList.splice(i, 1); 
+                    --i; 
+                }
+            }
+
+            rendenHandler = $request(renden);
+        }
+
+
+        /// TODU: 获取系统当前时间；
+        function getTimer() {
+            if ( window.performance && window.performance.now ) {
+                return window.performance.now();
+            }
+
+            if ( Date.now ) {
+                return Date.now();
+            }
+
+            return +(new Date);
+        }
+
+
+        /// TODU: 生成随机的颜色值；
+        function randomColor() {
+            var r = (Math.random() * 0xFF) >> 0;
+            var g = (Math.random() * 0xFF) >> 0;
+            var b = (Math.random() * 0xFF) >> 0;
+            var a = (Math.random() * 0.8 + 0.2);
+
+            return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+        }
+
+
+        /// TODU: 添加一个 `Ball` 对象至显示对象列表中；
+        function createBall( mouseX, mouseY ) {
+            var radius = Math.random() * 8 + 5;
+            var color  = randomColor();
+            var ball = new Ball( radius, color );
+                ball.x = mouseX;
+                ball.y = mouseY;
+                ball.vx = 8 * ((Math.random() - 0.5) * pixelPerMeter); /// 随机 x 轴速度；
+                ball.vy = 16 * ((Math.random()) * -pixelPerMeter);     /// 随机 y 轴速度；
+                ball.bounce = -(((ball.radius - 5) / 8) * 0.4) - 0.4;
+                ball.isActived = true;
+
+            stageList.push( ball );
+        }
+
+
+
+
+
+
+        /// TODU: 初始化；
+        if ( !(typeof document.addEventListener == "function") ) {
+            document.onreadystatechange = function ( evt ) {
+                if ( !(this.readyState == "complete") ) {
+                    return;
+                }
+                var noCanvas = document.createElement("div");
+                    noCanvas.id = "no-canvas";
+                    noCanvas.innerHTML = "SORRY，您的浏览器不支持 `canvas` 标签。";
+
+                var stageWrapper = document.getElementById("stage-wrapper");
+                    stageWrapper.appendChild(noCanvas);
+            }
+
+            return;
+        }
+
+
+        document.addEventListener("DOMContentLoaded", function( evt ) {
+            /// TODU: 获取/初始化 `DOM` 对象；
+            var stageWrapper = document.getElementById("stage-wrapper");
+                stage.width  = 800;
+                stage.height = 600;
+                stage.id = "stage";
+                stageWrapper.appendChild(stage);
+
+            /// TODU: 舞台鼠标点击事件；
+            stage.addEventListener("mousedown", function( evt ) {
+                mouseX = (window.pageXOffset + (evt.clientX || evt.pageX) - stage.offsetLeft);
+                mouseY = (window.pageYOffset + (evt.clientY || evt.pageY) - stage.offsetTop );
+                isMouseDown = true;
+            });
+
+            stage.addEventListener("mousemove", function( evt ) {
+                mouseX = (window.pageXOffset + (evt.clientX || evt.pageX) - stage.offsetLeft);
+                mouseY = (window.pageYOffset + (evt.clientY || evt.pageY) - stage.offsetTop );
+            });
+
+            document.addEventListener("mouseup", function( evt ) {
+                isMouseDown = false;
+            });
+
+            /// TODU: 启动场景渲染；
+            timeLast = getTimer();
+            rendenHandler = $request(renden);
+        });
+        
+    }(this));
+    ///]]></script>
+
+
+</head>
+<body>
+    <div id="stage-wrapper"></div>
+</body>
+</html>

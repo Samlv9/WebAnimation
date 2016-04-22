@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Timer</title>
+    <style type="text/css">
+        body { margin: 40px; background: rgb(38, 50, 56); overflow: hidden; line-height: 1.5; font-size: 14px; color: #fff;
+               font-family: 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif; }
+        
+        .box { width: 50px; height: 50px; margin-bottom: 20px; background: #aaa; border: 1px solid #666;
+               border-radius: 4px; text-align: center; font-size: 16px; line-height: 50px; }
+    </style>
+<body>
+<div class="box"></div>
+    
+    
+<script type="text/javascript">
+    // console.log("Date:", Date.now());
+    // console.log("Performance:", performance.webkitNow());
+
+/// 1. 计时器
+    var handle = requestAnimationFrame(update);
+    
+    function update() {
+        var time = performance.now();
+
+        if ( time < 1000 ) {
+            handle = requestAnimationFrame(update);
+        }
+        
+        console.log("time:", time);
+    }
+    
+    
+/// 2. 插值函数
+    function Linear( t, b, c, d ) {
+        return b + c * (t / d);
+    }
+    
+    
+/// 3. 完整 Tween 动画
+    var target = document.querySelector(".box");
+
+    function update() {
+        var time = performance.now();
+        var newX = Linear(time, 0, 500, 2000);
+        
+        target.style.transform = "translateX(" + newX + "px)";
+        
+        if ( time < 2000 ) {
+            handle = requestAnimationFrame(update);
+        }
+    }
+</script>
+</body>
+</html>
